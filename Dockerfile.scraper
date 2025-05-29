@@ -1,0 +1,38 @@
+FROM node:18-alpine
+
+# Работаем под root для установки пакетов
+USER root
+
+# Устанавливаем утилиты и sqlite
+RUN apk update && apk add --no-cache \
+      bash \
+      curl \
+      sqlite \
+    && rm -rf /var/cache/apk/*
+
+# Копируем entrypoint и даем ему права
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Устанавливаем Puppeteer без скачивания Chromium
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+RUN npm install -g puppeteer@latest
+
+# Переключаем рабочую директорию
+WORKDIR /usr/src/app
+
+# Копируем код скрапера
+COPY scraper/ ./
+
+# Устанавливаем npm‑зависимости под root
+RUN npm install
+
+# Меняем владельца каталога приложения на node
+RUN chown -R node:node /usr/src/app
+
+# Переключаемся на непривилегированного пользователя
+USER node
+
+# Используем наш entrypoint, затем запускаем скрипт
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["node", "src/server.js"]

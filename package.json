@@ -1,0 +1,17 @@
+{
+  "name": "hh-scraper-service",
+  "version": "1.0.0",
+  "main": "src/scraper.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "body-parser": "^1.20.2",
+    "axios": "^1.4.0",
+    "puppeteer-core": "^21.11.0",
+    "puppeteer-extra": "^3.3.4",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "dotenv": "^16.3.1"
+  }
+}
