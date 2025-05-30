@@ -1,7 +1,7 @@
-// helpers.js
-const fs = require('fs');
-const path = require('path');
+const puppeteer = require('puppeteer-core');
+const axios = require('axios');
 
+let browser = null;
 
 async function getBrowser() {
   if (browser) return browser;
@@ -9,7 +9,6 @@ async function getBrowser() {
   const CHROME_URL = process.env.CHROME_URL || 'http://127.0.0.1:9222';
   
   try {
-    // Пытаемся подключиться к уже запущенному Chrome
     const response = await axios.get(`${CHROME_URL}/json/version`);
     const { webSocketDebuggerUrl } = response.data;
     
@@ -23,7 +22,6 @@ async function getBrowser() {
   } catch (error) {
     console.log('❌ Failed to connect to Chrome:', error.message);
     
-    // Если подключение не удалось, запускаем новый экземпляр
     browser = await puppeteer.launch({
       headless: true,
       args: [

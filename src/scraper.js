@@ -1,13 +1,10 @@
 const puppeteerExtra = require("puppeteer-extra");
 const Stealth = require("puppeteer-extra-plugin-stealth");
-const axios = require("axios");
-import { getBrowser } from "./helpers";
+const { getBrowser } = require("./helpers");
+
 puppeteerExtra.use(Stealth());
 
-
 const pages = new Map();
-
-
 
 async function safeGoto(page, url, opts) {
   for (let i = 0; i < 3; i++) {

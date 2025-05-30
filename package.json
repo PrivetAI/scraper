@@ -13,7 +13,7 @@
     "puppeteer-extra": "^3.3.4",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
     "dotenv": "^16.3.1",
-    "winston": "^3.8.2"
-
+    "winston": "^3.8.2",
+    "sqlite3": "^5.1.6"
   }
 }
