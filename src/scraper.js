@@ -6,16 +6,28 @@ puppeteerExtra.use(Stealth());
 
 const pages = new Map();
 
-async function safeGoto(page, url, opts) {
+async function safeGoto(page, url, opts = {}) {
+  const defaultOpts = { 
+    waitUntil: "domcontentloaded", 
+    timeout: 30000,
+    ...opts 
+  };
+  
+  console.log(`🌐 Navigating to: ${url}`);
+  
   for (let i = 0; i < 3; i++) {
     try {
-      return await page.goto(url, opts);
+      const response = await page.goto(url, defaultOpts);
+      console.log(`✅ Navigation successful, status: ${response.status()}`);
+      return response;
     } catch (e) {
+      console.warn(`⚠️ Navigation attempt ${i + 1} failed:`, e.message);
       if (e.message.includes("ERR_NETWORK_CHANGED") && i < 2) {
         await page.waitForTimeout(1000 * (i + 1));
         continue;
       }
-      throw e;
+      if (i === 2) throw e;
+      await page.waitForTimeout(2000);
     }
   }
 }
@@ -192,10 +204,10 @@ async function applyOnPage(page, coverLetterText) {
 async function scrapeVacancy(url) {
   const browser = await getBrowser();
   const page = await browser.newPage();
-  page.setDefaultTimeout(0);
-  page.setDefaultNavigationTimeout(0);
+  page.setDefaultTimeout(30000);
+  page.setDefaultNavigationTimeout(30000);
   
-  await safeGoto(page, url, { waitUntil: "domcontentloaded", timeout: 0 });
+  await safeGoto(page, url);
   
   const vacancyId = extractVacancyId(url);
   const details = await extractVacancyDetails(page);
@@ -217,21 +229,55 @@ async function applyToVacancy(vacancyId, coverLetterText) {
 }
 
 async function scrapeVacancyList(url) {
+  console.log(`🔍 Starting vacancy list scraping for: ${url}`);
+  
   const browser = await getBrowser();
   const page = await browser.newPage();
+  page.setDefaultTimeout(30000);
+  page.setDefaultNavigationTimeout(30000);
   
-  await safeGoto(page, url, { waitUntil: "domcontentloaded", timeout: 0 });
+  console.log('📄 Creating new page...');
   
-  await page.evaluate(async () => {
-    const distance = 100;
-    const delay = 100;
-    while (document.scrollingElement.scrollTop + window.innerHeight < document.scrollingElement.scrollHeight) {
-      document.scrollingElement.scrollBy(0, distance);
-      await new Promise(r => setTimeout(r, delay));
-    }
-  });
+  await safeGoto(page, url);
+  
+  console.log('📜 Starting scroll to load all vacancies...');
+  
+  try {
+    await page.evaluate(async () => {
+      const distance = 100;
+      const delay = 100;
+      let lastHeight = document.scrollingElement.scrollHeight;
+      let scrollCount = 0;
+      
+      while (scrollCount < 50) { // максимум 50 скроллов
+        document.scrollingElement.scrollBy(0, distance);
+        await new Promise(r => setTimeout(r, delay));
+        
+        const newHeight = document.scrollingElement.scrollHeight;
+        if (newHeight === lastHeight) {
+          break;
+        }
+        lastHeight = newHeight;
+        scrollCount++;
+      }
+      
+      console.log(`Scrolled ${scrollCount} times`);
+    });
+  } catch (e) {
+    console.warn('⚠️ Scroll error:', e.message);
+  }
 
-  await page.waitForSelector('[data-qa^="vacancy-serp__vacancy"]', { timeout: 30000 });
+  console.log('🎯 Waiting for vacancy elements...');
+  
+  try {
+    await page.waitForSelector('[data-qa^="vacancy-serp__vacancy"]', { timeout: 10000 });
+  } catch (e) {
+    console.error('❌ No vacancy elements found:', e.message);
+    await page.close();
+    throw new Error('No vacancy elements found on page');
+  }
+
+  console.log('📊 Extracting vacancy data...');
 
   const vacancies = await page.$$eval('[data-qa^="vacancy-serp__vacancy"]', nodes =>
     nodes.map(node => {
@@ -250,6 +296,8 @@ async function scrapeVacancyList(url) {
     }).filter(Boolean)
   );
 
+  console.log(`✅ Found ${vacancies.length} vacancies`);
+  
   await page.close();
   return vacancies;
 }
