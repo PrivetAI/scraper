@@ -27,6 +27,9 @@ COPY scraper/ ./
 # Устанавливаем npm‑зависимости под root
 RUN npm install
 
+# Создаем папку для логов и даем права
+RUN mkdir -p logs && chmod 755 logs
+
 # Меняем владельца каталога приложения на node
 RUN chown -R node:node /usr/src/app
 
