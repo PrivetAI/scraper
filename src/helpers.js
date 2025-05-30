@@ -11,45 +11,27 @@ async function getBrowser() {
   
   if (USE_REMOTE_CHROME) {
     try {
-      console.log(`🔗 Trying to connect to Chrome at ${CHROME_URL}`);
+      console.log(`🔗 Connecting to Chrome at ${CHROME_URL}`);
       const response = await axios.get(`${CHROME_URL}/json/version`, { timeout: 5000 });
       const { webSocketDebuggerUrl } = response.data;
       
       browser = await puppeteer.connect({
         browserWSEndpoint: webSocketDebuggerUrl,
-        defaultViewport: { width: 1280, height: 800 }
+        defaultViewport: { 
+          width: parseInt(process.env.VIEWPORT_WIDTH) || 1280, 
+          height: parseInt(process.env.VIEWPORT_HEIGHT) || 800 
+        }
       });
       
-      console.log('✅ Connected to existing Chrome instance');
+      console.log('✅ Connected to remote Chrome');
       return browser;
     } catch (error) {
-      console.log('❌ Failed to connect to remote Chrome:', error.message);
+      console.error('❌ Failed to connect to remote Chrome:', error.message);
+      throw error;
     }
   }
   
-  const chromePath = process.env.CHROME_PATH || '/usr/bin/google-chrome';
-  
-  browser = await puppeteer.launch({
-    executablePath: chromePath,
-    headless: true,
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-web-security',
-      '--disable-features=VizDisplayCompositor',
-      '--disable-dev-shm-usage',
-      '--no-first-run',
-      '--no-default-browser-check',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding'
-    ]
-  });
-  
-  console.log('✅ Launched new Chrome instance');
-  return browser;
+  throw new Error('Remote Chrome connection required but failed');
 }
 
-module.exports = {
-  getBrowser,
-};
+module.exports = { getBrowser };
